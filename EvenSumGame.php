@@ -56,15 +56,20 @@ class EvenSumGame
     protected $oddNumberPockets = [];
 
     /**
-     * No solution or 100% winning chance is not possible.
+     * Slices of Numbers to evaluate smallest or shortest slice
+     *
+     * @var array
+     */
+    protected $slices = [];
+
+    /**
+     * No solution
      *
      * @type constant
      */
     const NO_SOLUTION = 'NO SOLUTION';
 
     /**
-     * Construct
-     *
      * @param array $numbers
      */
     public function __construct(array $numbers)
@@ -99,7 +104,7 @@ class EvenSumGame
      */
     protected function hasValidSolution()
     {
-        return $this->oddTurnsRemaining() + $this->evenTurnsRemaining() === 1;
+        return $this->totalEvenNumbers > 2 and $this->totalOddNumbers > 1;
     }
 
     /**
@@ -133,6 +138,8 @@ class EvenSumGame
     /**
      * Split odd and even
      *
+     * @param array $oddNumbers
+     * @param array $evenNumbers
      * @return array
      */
     private function splitOddEven($oddNumbers = [], $evenNumbers = [])
@@ -181,39 +188,19 @@ class EvenSumGame
 
     protected function getSmallestShortestOddSlice()
     {
-        $smallestSlices = null;
-        $smallestSlice  = [];
-
-        foreach (array_chunk($this->oddNumbers, 2, true) as $slice) {
-
-            if ((! $slice) or count($slice) == 1) {
-                continue;
-            }
-
-            if (! $smallestSlices) {
-                $smallestSlices[] = $slice;
-            }
-
-            if (array_count_values($slice) < array_count_values(end($smallestSlices))) {
-                $smallestSlices[] = $slice;
-            }
+        if (! $this->slice($this->oddNumbers)) {
+            return false;
         }
 
-        if (count($smallestSlices) > 1) {
-            foreach ($smallestSlices as $index => $currentSmallestSlice) {
-                if (array_count_values($smallestSlice) > array_count_values($currentSmallestSlice)
-                    or array_count_values($smallestSlice) === 0) {
-                    $smallestSlice = $currentSmallestSlice;
-                }
-            }
-        } else {
-            $smallestSlice = $smallestSlices[0];
+        if (! $slices = $this->getSmallestSlices()) {
+            return $this->slices[0];
         }
 
-        $smallestSlice = array_keys($smallestSlice);
-        asort($smallestSlice);
+        if (count($slices) > 1) {
+            return $this->getShortestSlice($slices);
+        }
 
-        return $smallestSlice;
+        return $slices[0];
     }
 
     /**
@@ -223,20 +210,75 @@ class EvenSumGame
      */
     protected function getSmallestEvenNumbers()
     {
-        $evenNumbers = $this->evenNumbers;
-
         if (! $this->hasEvenNumbers()) {
             return static::NO_SOLUTION;
         }
 
-        $evenNumber = current((array_keys($this->evenNumbers)));
+        $evenNumber = current(array_keys($this->evenNumbers));
 
         return $this->stringify([$evenNumber, $evenNumber]);
     }
 
     /**
+     * Slice numbers into two pocket of array
+     *
+     * @param array $numbers
+     * @return array
+     */
+    protected function slice(array $numbers)
+    {
+        foreach ($numbers as $numberIndex => $number) {
+            foreach ($numbers as $subSliceIndex => $subSliceNumber) {
+                if ($number == $subSliceNumber) {
+                    continue;
+                }
+
+                $this->slices[] = [
+                    $subSliceIndex => $number,
+                    $numberIndex   => $subSliceNumber
+                ];
+            }
+        }
+
+        return $this->slices;
+    }
+
+    /**
+     * Get Smallest Slices
+     *
+     * @return array
+     */
+    protected function getSmallestSlices()
+    {
+        $smallestSliceSum = null;
+        $smallestSlices   = [];
+
+        foreach ($this->slices as $slice) {
+            if ($smallestSliceSum > array_count_values($slice) or ! $smallestSliceSum) {
+                $smallestSlices[] = $slice;
+                $smallestSliceSum = array_count_values($slice);
+            }
+        }
+
+        return $smallestSlices;
+    }
+
+    /**
+     * Get slice by shortest key
+     *
+     * @param $slices
+     * @return array
+     */
+    protected function getShortestSlice($slices)
+    {
+        // @todo Find shortest key and return that slice
+        return $slices[0];
+    }
+
+    /**
      * Stringify array
      *
+     * @param array $array
      * @return array $array
      */
     private function stringify(array $array)
@@ -277,5 +319,7 @@ function solution(array $numbers)
 
 function dd($data)
 {
-    var_dump($data);
+    var_dump($data);exit;
 }
+
+print_r(solution([4, 3, 5, 7, 2, 10]));
